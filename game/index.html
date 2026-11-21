@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Port Solano — Open-World Crime Story</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0b1620;
+    font-family: "Trebuchet MS", "Segoe UI", Verdana, sans-serif; }
+  #stage { position: fixed; inset: 0; }
+  #game { display: block; width: 100%; height: 100%; }
+  .panel { position: absolute; color: #fff; user-select: none; }
+  #menu { inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, rgba(8, 30, 46, 0.25) 0%, rgba(8, 30, 46, 0.78) 78%);
+    text-align: center; z-index: 20; }
+  #menu h1 { font-size: 64px; letter-spacing: 10px; margin: 0; color: #ffd23e;
+    text-shadow: 0 4px 0 #b3541e, 0 8px 24px rgba(0,0,0,0.7); font-style: italic; }
+  #menu h2 { font-size: 20px; letter-spacing: 6px; margin: 6px 0 18px; color: #9be7ff; font-weight: 400; }
+  #menu p { max-width: 560px; line-height: 1.55; font-size: 15px; color: #eaf6ff; margin: 4px 0; }
+  #menu .btn { margin-top: 22px; background: #ffd23e; color: #1a1200; border: 0; border-radius: 8px;
+    padding: 14px 42px; font-size: 19px; font-weight: 800; letter-spacing: 2px; cursor: pointer;
+    box-shadow: 0 6px 0 #b3541e, 0 10px 24px rgba(0,0,0,0.5); }
+  #menu .btn:hover { filter: brightness(1.08); }
+  #menu .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #b3541e; }
+  #menu .keys { margin-top: 20px; font-size: 13px; color: #cfe8f5; line-height: 1.8; }
+  #menu .keys b { color: #ffd23e; }
+  #toast { left: 50%; top: 14px; transform: translateX(-50%); background: rgba(5, 18, 30, 0.85);
+    border: 1px solid rgba(255, 210, 62, 0.55); border-radius: 8px; padding: 10px 18px;
+    font-size: 15px; color: #fff; display: none; z-index: 15; max-width: 640px; text-align: center; }
+  #dialog { left: 50%; bottom: 118px; transform: translateX(-50%); width: 620px; max-width: 86vw;
+    background: rgba(5, 18, 30, 0.88); border-left: 5px solid #ffd23e; border-radius: 6px;
+    padding: 12px 16px; font-size: 15px; line-height: 1.5; display: none; z-index: 15; }
+  #dialog .who { color: #ffd23e; font-weight: 800; letter-spacing: 1px; }
+  #objective { left: 16px; top: 16px; background: rgba(5, 18, 30, 0.78); border-radius: 8px;
+    padding: 10px 14px; font-size: 14px; line-height: 1.45; max-width: 320px; display: none; z-index: 12; }
+  #objective .t { color: #ffd23e; font-weight: 800; letter-spacing: 1px; font-size: 12px; }
+  #hint { left: 50%; bottom: 26px; transform: translateX(-50%); background: rgba(5, 18, 30, 0.8);
+    border-radius: 20px; padding: 7px 16px; font-size: 13.5px; color: #dff2ff; display: none; z-index: 12;
+    white-space: nowrap; }
+  #paused { inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column;
+    background: rgba(4, 14, 24, 0.72); z-index: 18; text-align: center; }
+  #paused h1 { color: #ffd23e; letter-spacing: 8px; font-size: 40px; margin: 0 0 10px; }
+  #paused p { color: #dff2ff; font-size: 15px; line-height: 1.7; max-width: 520px; }
+  #paused .btn { margin-top: 16px; background: #ffd23e; color: #1a1200; border: 0; border-radius: 8px;
+    padding: 12px 34px; font-size: 17px; font-weight: 800; letter-spacing: 2px; cursor: pointer; }
+  #over { inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column;
+    background: rgba(20, 4, 8, 0.78); z-index: 18; text-align: center; }
+  #over h1 { color: #ff5a5a; letter-spacing: 10px; font-size: 52px; margin: 0; }
+  #over p { color: #ffe2e2; font-size: 16px; line-height: 1.6; max-width: 520px; }
+  #over .btn { margin-top: 18px; background: #ffd23e; color: #1a1200; border: 0; border-radius: 8px;
+    padding: 12px 34px; font-size: 17px; font-weight: 800; letter-spacing: 2px; cursor: pointer; }
+  #vignette { inset: 0; pointer-events: none; z-index: 10;
+    background: radial-gradient(ellipse at center, transparent 62%, rgba(4, 10, 18, 0.35) 100%); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="game" width="1280" height="800"></canvas>
+  <div id="vignette" class="panel"></div>
+  <div id="objective" class="panel"><div class="t" id="objTitle">MISSION</div><div id="objText"></div></div>
+  <div id="toast" class="panel"></div>
+  <div id="dialog" class="panel"><span class="who" id="dlgWho"></span> <span id="dlgText"></span></div>
+  <div id="hint" class="panel"></div>
+  <div id="menu" class="panel">
+    <h1>PORT SOLANO</h1>
+    <h2>AN OPEN-WORLD CRIME STORY</h2>
+    <p>You are <b>Rico Vega</b>, a retired stunt driver. You owe <b>$40,000</b> to the Meridian crew,
+    and the fixer <b>Otto Vane</b> is holding the clock. Five jobs stand between you and a clean slate —
+    steal the cars, run the drops, outdrive the Solano PD, and finish the five-star run to the lighthouse.</p>
+    <p>Explore a sun-soaked coastal city on foot or behind the wheel. Steal any car. Mind the stars.</p>
+    <button class="btn" id="playBtn">START ENGINE</button>
+    <div class="keys">
+      <b>W A S D</b> drive / walk &nbsp;·&nbsp; <b>E</b> enter / steal car &nbsp;·&nbsp; <b>SPACE</b> handbrake<br>
+      <b>Mouse</b> aim &nbsp;·&nbsp; <b>Click</b> shoot &nbsp;·&nbsp; <b>R</b> retry mission &nbsp;·&nbsp;
+      <b>P</b> pause &nbsp;·&nbsp; <b>M</b> mute &nbsp;·&nbsp; <b>C</b> camera zoom
+    </div>
+  </div>
+  <div id="paused" class="panel">
+    <h1>PAUSED</h1>
+    <p id="pauseStats"></p>
+    <button class="btn" id="resumeBtn">RESUME</button>
+  </div>
+  <div id="over" class="panel">
+    <h1 id="overTitle">BUSTED</h1>
+    <p id="overText"></p>
+    <button class="btn" id="retryBtn">TRY AGAIN</button>
+  </div>
+</div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
